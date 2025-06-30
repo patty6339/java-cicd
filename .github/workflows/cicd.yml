@@ -23,12 +23,3 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew build
-
-      - name: Docker build & push
-        uses: mr-smithers-excellent/docker-build-push@v4
-        with:
-          image: patty6339/testapp
-          tag: ${{ github.ref_name }}-${{ github.sha }}
-          registry: docker.io
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
