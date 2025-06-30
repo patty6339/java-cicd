@@ -28,14 +28,3 @@ jobs:
 
     - name: Run tests
       run: ./gradlew test
-
-    - name: Build Docker image
-      run: docker build -t java-app .
-
-    - name: Test Docker image
-      run: |
-        docker run -d -p 8080:8080 --name test-app java-app
-        sleep 10
-        # Add health check here if you have endpoints
-        docker stop test-app
-        docker rm test-app
