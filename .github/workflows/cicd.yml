@@ -28,3 +28,12 @@ jobs:
 
     - name: Run tests
       run: ./gradlew test
+
+    - name: Build and Push Docker Image
+      uses: mr-smithers-excellent/docker-build-push@v4
+      with:
+        image: patty6339/testapp
+        registry: docker.io
+        username: ${{secrets.DOCKER_USERNAME}}
+        password: ${{secrets.DOCKER_PASSWORD}}
+      
