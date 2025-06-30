@@ -24,6 +24,12 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
 
+      - name: Verify JAR exists
+        run: test -f "$JAR_FILE" || (echo "JAR file not found!" && exit 1)
+      
+      - name: Rename JAR for Docker
+        run: mv "$JAR_FILE" ./build/lib/my-app-1.0-SNAPSHOT.jar
+
       - name: Docker build & push
         uses: mr-smithers-excellent/docker-build-push@v4
         with:
