@@ -27,7 +27,7 @@ jobs:
       - name: Docker build & push
         uses: mr-smithers-excellent/docker-build-push@v4
         with:
-          image: your-dockerhub-username/testapp
+          image: patty6339/testapp
           tag: ${{ github.ref_name }}-${{ github.sha }}
           registry: docker.io
           username: ${{ secrets.DOCKER_USERNAME }}
