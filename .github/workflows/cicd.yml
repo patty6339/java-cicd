@@ -52,8 +52,14 @@ jobs:
 
     - name: Deploy observability stack (if not exists)
       run: |
-        if ! kubectl get namespace monitoring; then
-          ./deploy-observability.sh
+        if ! kubectl get namespace monitoring 2>/dev/null; then
+          echo "Deploying observability stack..."
+          timeout 600s ./deploy-observability.sh || {
+            echo "Observability deployment timed out, continuing with app deployment"
+            kubectl get pods -n monitoring || true
+          }
+        else
+          echo "Monitoring namespace already exists, skipping observability deployment"
         fi
 
     - name: Update deployment image
@@ -68,10 +74,23 @@ jobs:
         images: |
           ${{ env.AZURE_CONTAINER_REGISTRY }}/${{ env.CONTAINER_NAME }}:${{ github.sha }}
         kubectl-version: 'latest'
+      timeout-minutes: 15
+
+    - name: Debug deployment status
+      if: always()
+      run: |
+        echo "=== Deployment Status ==="
+        kubectl get deployments
+        echo "=== Pod Status ==="
+        kubectl get pods -o wide
+        echo "=== Pod Logs (if any pods exist) ==="
+        kubectl logs -l app=java-app --tail=50 || echo "No logs available yet"
+        echo "=== Events ==="
+        kubectl get events --sort-by=.metadata.creationTimestamp
 
     - name: Run health checks
       run: |
-        kubectl rollout status deployment/java-app-deployment --timeout=300s
+        kubectl rollout status deployment/java-app-deployment --timeout=600s
         kubectl get services
         
     - name: Notify monitoring systems
