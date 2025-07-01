@@ -5,9 +5,9 @@ name: Java CI/CD with Gradle and Azure AKS
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 env:
   AZURE_CONTAINER_REGISTRY: javaappdevacre2ljmlwn.azurecr.io
