@@ -8,7 +8,7 @@ public class AppTest {
     public void testApp() {
         App myApp = new App();
 
-        String result = myApp.getStatus();
+        String result = myApp.health();
 
         assertEquals("OK", result);
     }

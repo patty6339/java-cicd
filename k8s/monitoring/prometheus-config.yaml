@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    rule_files:
+      - "alert_rules.yml"
+
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      - job_name: 'java-app'
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - default
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: java-app-service
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: http
+        metrics_path: '/actuator/prometheus'
+
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - alertmanager-service:9093
+
+  alert_rules.yml: |
+    groups:
+      - name: java-app-alerts
+        rules:
+          - alert: HighErrorRate
+            expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "High error rate detected on {{ $labels.instance }}"
+              description: "Error rate is above 10% for 5 minutes on {{ $labels.instance }}"
+
+          - alert: HighResponseTime
+            expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High response time detected on {{ $labels.instance }}"
+              description: "95th percentile response time is above 500ms on {{ $labels.instance }}"
+              
+          - alert: ApplicationDown
+            expr: up{job="java-app"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Java application is down"
+              description: "Java application has been down for more than 2 minutes"
+              
+          - alert: HighMemoryUsage
+            expr: (container_memory_usage_bytes{pod=~"java-app.*"} / container_spec_memory_limit_bytes{pod=~"java-app.*"}) > 0.8
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High memory usage on {{ $labels.pod }}"
+              description: "Memory usage is above 80% on {{ $labels.pod }}"
+              
+          - alert: HighCPUUsage
+            expr: (rate(container_cpu_usage_seconds_total{pod=~"java-app.*"}[5m]) / container_spec_cpu_quota{pod=~"java-app.*"} * container_spec_cpu_period{pod=~"java-app.*"}) > 0.8
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High CPU usage on {{ $labels.pod }}"
+              description: "CPU usage is above 80% on {{ $labels.pod }}"
